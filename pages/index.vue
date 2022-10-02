@@ -1,7 +1,8 @@
 <template>
 <div>
-
     <ins-save-template-dialog :showTemplateSaveDialog="showTemplateSaveDialog" :javascript="javascript" :css="css" :html="html" @update="updateTemplateSaveDialog" />
+
+    <InsSnackbars :isShow="showSnackbar" :text="snackbarText" />
 
     <div class="d-flex justify-end">
         <div class="mr-4">
@@ -52,6 +53,7 @@ export default {
         InsContent: () => import("../components/content/index"),
         InsEditor: () => import("../components/editor/index"),
         InsSaveTemplateDialog: () => import("../components/save-template-dialog"),
+        InsSnackbars: () => import("../components/ui/snackbars"),
     },
 
     data: () => ({
@@ -70,6 +72,8 @@ export default {
         showTemplateSaveDialog: false,
 
         histories: [],
+        showSnackbar: false,
+        snackbarText: '',
     }),
 
     mounted() {
@@ -166,6 +170,9 @@ export default {
             await this.delay(1000);
 
             const variables = this.getVariables(javascript)
+            if (variables === null)
+                return
+
             variables.map((item) => {
                 html = html
                     .replace(/{{ /g, '{{')
@@ -194,23 +201,30 @@ export default {
          * @param {*} javascript Javascript code
          */
         getVariables(javascript) {
-            const findInPos = (start, end, str) => {
-                return str.substring(
-                    start.pos,
-                    end.endpos
-                );
+            try {
+                const findInPos = (start, end, str) => {
+                    return str.substring(
+                        start.pos,
+                        end.endpos
+                    );
+                }
+
+                let results = UglifyJS.parse(javascript).body.filter(x => x.__proto__.TYPE == "Var")
+                    .map(x =>
+                        x.definitions.map(y => ({
+                            name: y.name.name,
+                            value: y.value ? findInPos(y.value.start, y.value.end, javascript) : undefined
+                        })),
+
+                    ).flat()
+
+                return results
+            } catch (error) {
+                this.snackbarText = 'Invalid javascript!'
+                this.showSnackbar = true
             }
 
-            let results = UglifyJS.parse(javascript).body.filter(x => x.__proto__.TYPE == "Var")
-                .map(x =>
-                    x.definitions.map(y => ({
-                        name: y.name.name,
-                        value: y.value ? findInPos(y.value.start, y.value.end, javascript) : undefined
-                    })),
-
-                ).flat()
-
-            return results
+            return null
         }
     }
 };
