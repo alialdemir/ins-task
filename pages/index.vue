@@ -153,21 +153,16 @@ export default {
             }
 
             setTimeout(async () => { // javascript kodu değişince tekrar çalışmıyordu o yüzden delay ekledim
-                const css = await this.cssValidate(this.css)
+                const cssWithVariables = await this.replaceVariables(this.javascript, this.css)
+                const css = await this.cssValidate(cssWithVariables)
                 if (css === false) {
-                    return
-                }
-
-                const htmlWithVariables = await this.replaceVariables(this.javascript, this.html)
-                const html = await this.cssValidate(htmlWithVariables)
-                if (html === false) {
                     return
                 }
 
                 this.content = {
                     javascript: this.javascript,
                     css,
-                    html,
+                    html: await this.replaceVariables(this.javascript, this.html),
                 }
             }, 100)
         },
@@ -215,19 +210,29 @@ export default {
          */
         getVariables(javascript) {
             try {
-                const findInPos = (start, end, str) => {
-                    return str.substring(
+                const findInPos = (start, end, quote, str) => {
+                    let result = str.substring(
                         start.pos,
                         end.endpos
                     );
+
+                    if (quote) {
+                        result = result.substring(1, result.length - 1)
+                    }
+
+                    return result
                 }
 
                 let results = UglifyJS.parse(javascript).body.filter(x => x.__proto__.TYPE == "Var")
                     .map(x =>
-                        x.definitions.map(y => ({
-                            name: y.name.name,
-                            value: y.value ? findInPos(y.value.start, y.value.end, javascript) : undefined
-                        })),
+                        x.definitions.map(y => {
+                            const d = ({
+                                name: y.name.name,
+                                value: y.value ? findInPos(y.value.start, y.value.end, y.value.quote, javascript) : undefined
+                            })
+
+                            return d
+                        }),
 
                     ).flat()
 
