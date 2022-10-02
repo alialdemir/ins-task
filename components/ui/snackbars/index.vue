@@ -31,6 +31,9 @@ export default {
             get: function () {
                 return this.isShow
             },
+            set: function (value) {
+                this.$emit('update', value)
+            }
         }
     }
 }

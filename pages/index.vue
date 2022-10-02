@@ -2,7 +2,7 @@
 <div>
     <ins-save-template-dialog :showTemplateSaveDialog="showTemplateSaveDialog" :javascript="javascript" :css="css" :html="html" @update="updateTemplateSaveDialog" />
 
-    <InsSnackbars :isShow="showSnackbar" :text="snackbarText" />
+    <InsSnackbars :isShow="showSnackbar" :text="snackbarText" @update="showSnackbar = $event" />
 
     <div class="d-flex justify-end">
         <div class="mr-4">
@@ -42,6 +42,8 @@
 </template>
 
 <script>
+import cssValidator from 'w3c-css-validator';
+
 export default {
     name: "IndexPage",
 
@@ -151,10 +153,21 @@ export default {
             }
 
             setTimeout(async () => { // javascript kodu değişince tekrar çalışmıyordu o yüzden delay ekledim
+                const css = await this.cssValidate(this.css)
+                if (css === false) {
+                    return
+                }
+
+                const htmlWithVariables = await this.replaceVariables(this.javascript, this.html)
+                const html = await this.cssValidate(htmlWithVariables)
+                if (html === false) {
+                    return
+                }
+
                 this.content = {
                     javascript: this.javascript,
-                    css: this.css,
-                    html: await this.replaceVariables(this.javascript, this.html),
+                    css,
+                    html,
                 }
             }, 100)
         },
@@ -225,7 +238,22 @@ export default {
             }
 
             return null
-        }
+        },
+
+        async cssValidate(css) {
+            if (css === '') {
+                return ''
+            }
+
+            const result = await cssValidator.validateText(css);
+            if (!result.valid) {
+                this.snackbarText = 'Invalid CSS!'
+                this.showSnackbar = true
+                return false
+            }
+
+            return css
+        },
     }
 };
 </script>
