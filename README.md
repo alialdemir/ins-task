@@ -1,5 +1,7 @@
 # insider-task
 
+ `Süre kısıtlı olduğu için kasıtlı olarak, vuex kullanmadım :)`
+
 ## Build Setup
 
 ```bash
